@@ -1,82 +1,90 @@
 package ui;
 
 import db.DBConnection;
+
 import javax.swing.*;
 import java.awt.*;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 public class DonationForm {
+    private final String username;
 
-    public DonationForm() {
-        JFrame f = new JFrame("Make Donation");
-        f.setSize(400,250);
-        f.setLayout(null);
-        f.setLocationRelativeTo(null); // Center window
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    public DonationForm(String username){
+        this.username = username;
 
-        JLabel typeLabel = new JLabel("Type:");
-        JLabel amountLabel = new JLabel("Amount:");
-        JLabel bloodLabel = new JLabel("Blood Group:");
+        JFrame f = new JFrame("Donation Form");
 
-        typeLabel.setBounds(40,30,100,25);
-        amountLabel.setBounds(40,65,100,25);
-        bloodLabel.setBounds(40,100,100,25);
+        JLabel lType = new JLabel("Donation Type:");
+        JLabel lAmount = new JLabel("Amount:");
+        JLabel lBlood = new JLabel("Blood Group:");
 
-        JComboBox<String> type = new JComboBox<>(new String[]{"money","blood"});
+        String[] donationTypes = {"Money","Blood"};
+        JComboBox<String> type = new JComboBox<>(donationTypes);
+
         JTextField amount = new JTextField();
-        JTextField blood = new JTextField();
+        String[] bloodGroups = {"A+","A-","B+","B-","AB+","AB-","O+","O-"};
+        JComboBox<String> blood = new JComboBox<>(bloodGroups);
 
-        type.setBounds(150,30,150,25);
-        amount.setBounds(150,65,150,25);
-        blood.setBounds(150,100,150,25);
+        JButton submit = new JButton("Submit");
 
-        JButton donate = new JButton("Donate");
-        donate.setBounds(150,140,100,30);
-        donate.setBackground(Color.GREEN);
-        donate.setForeground(Color.WHITE);
-        donate.setFont(new Font("Arial", Font.BOLD, 14));
+        // Set bounds
+        lType.setBounds(50,30,120,25);
+        type.setBounds(180,30,120,25);
+        lAmount.setBounds(50,70,120,25);
+        amount.setBounds(180,70,120,25);
+        lBlood.setBounds(50,110,120,25);
+        blood.setBounds(180,110,120,25);
+        submit.setBounds(130,160,100,30);
 
-        // Tooltips
-        type.setToolTipText("Select donation type");
-        amount.setToolTipText("Enter donation amount (numeric)");
-        blood.setToolTipText("Enter blood group if donation type is blood");
-
-        donate.addActionListener(e -> {
+        // Submit action
+        submit.addActionListener(e -> {
             String donationType = type.getSelectedItem().toString();
-            String amt = amount.getText();
-            String bloodGrp = blood.getText();
+            String amtText = amount.getText().trim();
+            String bg = blood.getSelectedItem().toString();
 
-            // Input validation
-            if(amt.isEmpty() || !amt.matches("\\d+")) {
-                JOptionPane.showMessageDialog(f,"Enter valid numeric amount");
-                return;
+            int amt = 0; // default for blood donation
+
+            if(donationType.equals("Money")) {
+                if(amtText.isEmpty() || !amtText.matches("\\d+")) {
+                    JOptionPane.showMessageDialog(f,"Enter valid amount");
+                    return;
+                }
+                amt = Integer.parseInt(amtText);
             }
 
-            if(donationType.equals("blood") && bloodGrp.isEmpty()) {
-                JOptionPane.showMessageDialog(f,"Enter blood group for blood donation");
-                return;
-            }
-
-            // Database Insert
-            try(Connection con = DBConnection.getConnection();
+            try (Connection con = DBConnection.getConnection()) {
                 PreparedStatement ps = con.prepareStatement(
-                        "INSERT INTO donations(donation_type,amount,blood_group) VALUES(?,?,?)")) {
-
+                        "INSERT INTO donations(donation_type, amount, blood_group, donor_username) VALUES(?,?,?,?)"
+                );
                 ps.setString(1, donationType);
-                ps.setString(2, amt);
-                ps.setString(3, bloodGrp);
-                ps.executeUpdate();
+                ps.setInt(2, amt);
+                ps.setString(3, bg);
+                ps.setString(4, username);
 
-                JOptionPane.showMessageDialog(f,"Donation Successful");
-                amount.setText("");
-                blood.setText("");
-
-            } catch(Exception ex) { ex.printStackTrace(); }
+                int result = ps.executeUpdate();
+                if(result > 0) {
+                    JOptionPane.showMessageDialog(f,"Donation Submitted Successfully");
+                    f.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(f,"Donation could not be submitted");
+                }
+            } catch(Exception ex){
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(f,"Error submitting donation: " + ex.getMessage());
+            }
         });
 
-        f.add(typeLabel); f.add(amountLabel); f.add(bloodLabel);
-        f.add(type); f.add(amount); f.add(blood); f.add(donate);
+        // Add components
+        f.add(lType); f.add(type);
+        f.add(lAmount); f.add(amount);
+        f.add(lBlood); f.add(blood);
+        f.add(submit);
 
+        f.setSize(400,250);
+        f.setLayout(null);
+        f.setLocationRelativeTo(null);
         f.setVisible(true);
+        f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 }
