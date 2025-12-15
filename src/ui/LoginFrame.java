@@ -1,16 +1,15 @@
 package ui;
 
 import db.DBConnection;
+
 import javax.swing.*;
 import java.sql.*;
 
 public class LoginFrame {
-
     public LoginFrame() {
         JFrame f = new JFrame("User Login");
-
-        JLabel u = new JLabel("Username:");
-        JLabel p = new JLabel("Password:");
+        JLabel lUser = new JLabel("Username:");
+        JLabel lPass = new JLabel("Password:");
 
         JTextField user = new JTextField();
         JPasswordField pass = new JPasswordField();
@@ -18,45 +17,45 @@ public class LoginFrame {
         JButton login = new JButton("Login");
         JButton register = new JButton("Register");
 
-        u.setBounds(50,40,80,25);
-        p.setBounds(50,80,80,25);
-        user.setBounds(150,40,150,25);
-        pass.setBounds(150,80,150,25);
-        login.setBounds(50,130,100,30);
-        register.setBounds(200,130,100,30);
+        lUser.setBounds(50,30,100,25);
+        lPass.setBounds(50,70,100,25);
+        user.setBounds(150,30,150,25);
+        pass.setBounds(150,70,150,25);
+        login.setBounds(50,120,100,30);
+        register.setBounds(200,120,100,30);
 
-        // Login
         login.addActionListener(e -> {
-            try {
+            if(user.getText().isEmpty() || new String(pass.getPassword()).isEmpty()){
+                JOptionPane.showMessageDialog(f,"Username / Password required");
+                return;
+            }
+            try{
                 Connection con = DBConnection.getConnection();
                 PreparedStatement ps = con.prepareStatement(
-                        "SELECT * FROM users WHERE username=? AND password=? AND user_type='donor'"
+                        "SELECT * FROM users WHERE username=? AND password=? AND user_type!='admin'"
                 );
                 ps.setString(1,user.getText());
                 ps.setString(2,new String(pass.getPassword()));
-
                 ResultSet rs = ps.executeQuery();
-
                 if(rs.next()){
-                    JOptionPane.showMessageDialog(f,"Login Success");
                     f.dispose();
-                    new DonationForm();
+                    new UserDashboard(rs.getString("username")); // pass username
                 } else {
-                    JOptionPane.showMessageDialog(f,"Invalid Login");
+                    JOptionPane.showMessageDialog(f,"Invalid login");
                 }
             } catch(Exception ex){ ex.printStackTrace(); }
         });
 
-        // Register
         register.addActionListener(e -> {
             f.dispose();
-            new RegisterFrame();
+            new RegisterFrame(); // user registration
         });
 
-        f.add(u); f.add(p); f.add(user); f.add(pass);
+        f.add(lUser); f.add(lPass);
+        f.add(user); f.add(pass);
         f.add(login); f.add(register);
 
-        f.setSize(380,230);
+        f.setSize(400,250);
         f.setLayout(null);
         f.setLocationRelativeTo(null);
         f.setVisible(true);
